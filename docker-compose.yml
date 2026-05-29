@@ -1,0 +1,79 @@
+services:
+  jenkins:
+    build:
+      context: ./jenkins-container
+    restart: unless-stopped
+    environment:
+      JENKINS_OPTS: "--httpPort=8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    networks:
+      - backend
+
+  nginx:
+    build:
+      context: ./nginx
+    restart: unless-stopped
+    depends_on:
+      - jenkins
+    ports:
+      - "80:80"
+    networks:
+      - backend
+
+  grafana:
+    build:
+      context: ./grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-now}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+
+  prometheus:
+    build:
+      context: ./prometheus
+    restart: unless-stopped
+    volumes:
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - backend
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - backend
+
+  registry:
+    build:
+      context: ./registry
+    restart: unless-stopped
+    volumes:
+      - registry_data:/var/lib/registry
+    networks:
+      - backend
+
+volumes:
+  jenkins_home:
+  grafana_data:
+  prometheus_data:
+  registry_data:
+
+networks:
+  backend:
+    driver: bridge

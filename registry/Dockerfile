@@ -6,4 +6,4 @@ EXPOSE 5000
 
 VOLUME ["/var/lib/registry"]
 
-CMD ["/etc/docker/registry/config.yml"]
+CMD ["serve", "/etc/docker/registry/config.yml"]
