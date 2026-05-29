@@ -1,0 +1,57 @@
+name: Build Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to apply to every built image
+        required: true
+        default: latest
+        type: string
+
+jobs:
+  build:
+    name: Build ${{ matrix.image.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: jenkins
+            context: ./jenkins-container
+            file: ./jenkins-container/Dockerfile
+          - name: nginx
+            context: ./nginx
+            file: ./nginx/Dockerfile
+          - name: grafana
+            context: ./grafana
+            file: ./grafana/Dockerfile
+          - name: prometheus
+            context: ./prometheus
+            file: ./prometheus/Dockerfile
+          - name: registry
+            context: ./registry
+            file: ./registry/Dockerfile
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.image.name }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
+          platforms: linux/amd64,linux/arm64
+          push: false
+          load: false
+          tags: local/${{ matrix.image.name }}:${{ inputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
